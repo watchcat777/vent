@@ -25,23 +25,34 @@ hot_valves = config['CORE'].getint('hot_valves')
 cold_valves = config['CORE'].getint('cold_valves')
 
 
-temperature1 = 1000
+converter_pub = 1000
 
-temperature2 = 1000
+frequency_pub = 2000
 
-temperature3 = 1000
+feedback_hot1 = 3000
 
-temperature4 = 1000
+feedback_hot2 = 3000
 
-humidity1 = 1000
+feedback_cold1 = 3500
 
-humidity2 = 1000
+feedback_cold2 = 3500
+
+temperature1 = 4000
+
+temperature2 = 4000
+
+temperature3 = 5000
+
+temperature4 = 5000
+
+humidity1 = 4500
+
+humidity2 = 4500
+
 
 # publish state every INTERVAL seconds
 state_pub_counter_interval = 10
 state_pub_counter = state_pub_counter_interval
-
-
 
 
 def on_connect(client, obj, flags, rc):
@@ -51,12 +62,17 @@ def on_connect(client, obj, flags, rc):
     client.subscribe('in/t_auto', qos = 1)
     
     client.subscribe('in/converter', qos = 1)
+    client.subscribe('converter_pub', qos = 1)
+    
     client.subscribe('in/frequency', qos = 1)
+    client.subscribe('frequency_pub', qos = 1)
 
-    client.subscribe('feedback1', qos = 1)
-    client.subscribe('feedback2', qos = 1)
-    client.subscribe('feedback3', qos = 1)
-    client.subscribe('feedback4', qos = 1)
+    client.subscribe('in/hot_valves', qos = 1)
+    client.subscribe('in/cold_valves', qos = 1)
+    client.subscribe('feedback_hot1', qos = 1)
+    client.subscribe('feedback_hot2', qos = 1)
+    client.subscribe('feedback_cold1', qos = 1)
+    client.subscribe('feedback_cold2', qos = 1)
 
     client.subscribe('temperature1', qos = 1)
     client.subscribe('temperature2', qos = 1)
@@ -71,7 +87,7 @@ def on_connect(client, obj, flags, rc):
     
 def on_message(client, userdata, msg):
 
-    global t_auto, frequency, state
+    global state, t_auto, converter, converter_pub, frequency, frequency_pub, hot_valves,  feedback_hot1, feedback_hot2, cold_valves, feedback_cold1, feedback_cold2, temperature1, temperature2, temperature3, temperature4, humidity1, humidity2
 
     if msg.topic == 'in/vent_state':
 
@@ -146,8 +162,26 @@ def on_message(client, userdata, msg):
 
                 client.publish('converter_com', 'OFF')
 
+
+    elif msg.topic == 'converter_pub':
+
+        if msg.payload == b'ON':
+
+            converter_pub = 'ON'
+
+        elif msg.payload == b'OFF':
+
+            converter_pub = 'OFF'
+
+        elif msg.payload == b'RS485 USB ERROR':
+
+            converter_pub = 'ERROR'
+
+        elif msg.payload == b'RS485 READ ERROR':
+
+            converter_pub = 'ERROR'
+
             
-        
     elif msg.topic == 'in/frequency':
 
         if state == 'AUTO':
@@ -156,12 +190,73 @@ def on_message(client, userdata, msg):
 
         elif state == 'MANUAL':
 
-            config['CORE']['frequency'] = str(msg.payload)
+            config['CORE']['frequency'] = str(int(msg.payload))
             with open('config.ini', 'w') as configfile:
                 config.write(configfile)
 
-            client.publish('frequency_com', str(msg.payload))
+            client.publish('frequency_com', msg.payload)
 
+
+    elif msg.topic == 'frequency_pub':
+
+        if msg.payload == b'RS485 USB ERROR':
+
+            frequency_pub = 'ERROR'
+
+        elif msg.payload == b'RS485 READ ERROR':
+
+            frequency_pub = 'ERROR'
+
+        else:
+
+            frequency_pub = int(msg.payload)
+
+
+    elif msg.topic == 'in/hot_valves':
+
+        if state == 'AUTO':
+
+            client.publish('feedback_hot1', 'Switch to MANUAL!')
+            time.sleep(1)
+            client.publish('feedback_hot2', 'Switch to MANUAL!')
+
+        elif state == 'MANUAL':
+
+            config['CORE']['hot_valves'] = str(int(msg.payload))
+            with open('config.ini', 'w') as configfile:
+                config.write(configfile)
+
+            client.publish('hot_valves_com', msg.payload)
+
+
+    elif msg.topic == 'in/cold_valves':
+
+        if state == 'AUTO':
+
+            client.publish('feedback_cold1', 'Switch to MANUAL!')
+            time.sleep(1)
+            client.publish('feedback_cold2', 'Switch to MANUAL!')
+
+        elif state == 'MANUAL':
+
+            config['CORE']['cold_valves'] = str(int(msg.payload))
+            with open('config.ini', 'w') as configfile:
+                config.write(configfile)
+
+            client.publish('cold_valves_com', msg.payload)
+
+
+    # valves pubs
+    
+
+    elif msg.topic == 'temperature1':
+
+        temperature1 = int(msg.payload)
+
+
+    # t, h pubs
+
+        
 
         
     else:
@@ -179,6 +274,10 @@ client.loop_start()
 while True:
 
     print(state + ' ' + str(t_auto) + ' ' + converter + ' ' + str(frequency) + ' ' + str(hot_valves) + ' ' + str(cold_valves))
+
+    print(str(converter_pub) + ' ' + str(frequency_pub) + ' ' + str(feedback_hot1) + ' ' + str(feedback_hot2) + ' ' + str(feedback_cold1) + ' ' + str(feedback_cold2))
+    
+    print(str(temperature1) + ' ' + str(humidity1) + ' ' + str(temperature2) + ' ' + str(humidity2) + ' ' + str(temperature3) + ' ' + str(temperature4))
     
 
     state_pub_counter -= 1
@@ -186,7 +285,7 @@ while True:
     if state_pub_counter < 1:
 
         state_pub_counter = state_pub_counter_interval
-
+   
         client.publish('vent_state_pub', state)
         
         time.sleep(1)
@@ -198,6 +297,6 @@ while True:
     print(state_pub_counter)
     
     
-    time.sleep(1)
+    time.sleep(3)
 
 

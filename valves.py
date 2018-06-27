@@ -28,15 +28,14 @@ def move(position):
 
 def on_connect(client, obj, flags, rc):
     print('Connected')
-    client.subscribe('klapan1', qos = 1)
-    client.subscribe('in/klapan1', qos = 1)
-    client.subscribe('in/in/klapan1', qos = 1)
+    client.subscribe('hot_valves_com', qos = 1)
+    client.subscribe('cold_valves_com', qos = 1)
     client.publish('vent_state', 'Valves connected')
 
     
 def on_message(client, userdata, msg):
     
-    if msg.topic == 'in/klapan1':  
+    if msg.topic == 'hot_valves_com':  
 
         try: 
             klapan1_value = int(msg.payload)
@@ -48,7 +47,7 @@ def on_message(client, userdata, msg):
             client.publish('vent_state', 'Wrong value')
             
         
-    elif msg.topic == 'in/klapan2':
+    elif msg.topic == 'cold_valves_com':
 
         print(msg.payload)
         
@@ -78,7 +77,7 @@ while True:
     interpolate1 = round(values[0] / 10.24)
     print(values[0])
     print(interpolate1)
-    client.publish('feedback1', interpolate1)
+    client.publish('feedback_hot1', interpolate1)
         
     time.sleep(5)
 

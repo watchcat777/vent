@@ -2,17 +2,6 @@
 import minimalmodbus, time
 import paho.mqtt.client as mqtt
 
-try:
-    # port name, slave address (in decimal)
-    converter = minimalmodbus.Instrument('/dev/ttyUSB0', 1)
-    print('Using /dev/ttyUSB0')
-except Exception:
-    print('Using /dev/ttyUSB1')
-    converter = minimalmodbus.Instrument('/dev/ttyUSB1', 1)
-
-
-converter.serial.baudrate = 9600
-
 
 def on_connect(client, obj, flags, rc):
     print('Connected')
@@ -77,6 +66,25 @@ client.connect('127.0.0.1', 1883, 300)
 client.loop_start()
 
 
+try:
+    # port name, slave address (in decimal)
+    converter = minimalmodbus.Instrument('/dev/ttyUSB0', 1)
+    print('Using /dev/ttyUSB0')
+except Exception:
+    try:
+        converter = minimalmodbus.Instrument('/dev/ttyUSB1', 1)
+        print('Using /dev/ttyUSB1')
+    except Exception:
+        client.publish('vent_state_pub', 'RS485 USB ERROR')
+        time.sleep(1)
+        client.publish('converter_pub', 'RS485 USB ERROR')
+        time.sleep(1)
+        client.publish('frequency_pub', 'RS485 USB ERROR')
+
+
+converter.serial.baudrate = 9600
+
+
 while True:
     
     # Register number, number of decimals, function code 3 or 4
@@ -86,7 +94,11 @@ while True:
         client.publish('frequency_pub', str(frequency))
     except IOError:
         print('Failed to read')
-        client.publish('frequency_pub', 'Failed to read')
+        client.publish('frequency_pub', 'RS485 READ ERROR')
+        time.sleep(1)
+        client.publish('vent_state_pub', 'RS485 READ ERROR')
+
+    time.sleep(3)
 
 
     # Register number, number of decimals, function code 3 or 4
@@ -99,9 +111,10 @@ while True:
             client.publish('converter_pub', 'ON')
     except IOError:
         print('Failed to read')
-        client.publish('converter_pub', 'Failed to read')
+        client.publish('converter_pub', 'RS485 READ ERROR')
+        time.sleep(1)
+        client.publish('vent_state_pub', 'RS485 READ ERROR')
         
-        
-    time.sleep(5)
+    time.sleep(3)
 
 
