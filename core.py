@@ -1,14 +1,29 @@
 #!/usr/bin/python3
-import time
+import time, configparser
 import paho.mqtt.client as mqtt
 
-t_auto = 15
+config = configparser.ConfigParser()
 
-frequency = 5
+#config['CORE'] = {'state': 'AUTO', 't_auto': '15', 'converter': 'ON', 'frequency': '5', 'hot_valves': '0', 'cold_valves': '100'}
+#config['CORE']['key'] = 'value'
 
-converter = 1
+#with open('config.ini', 'w') as configfile:
+#    config.write(configfile)
 
-state = 'AUTO'
+config.read('config.ini')
+
+state = config['CORE']['state']
+
+t_auto = config['CORE'].getint('t_auto')
+
+converter = config['CORE']['converter']
+
+frequency = config['CORE'].getint('frequency')
+
+hot_valves = config['CORE'].getint('hot_valves')
+
+cold_valves = config['CORE'].getint('cold_valves')
+
 
 temperature1 = 1000
 
@@ -63,12 +78,20 @@ def on_message(client, userdata, msg):
         if msg.payload == b'MANUAL':
 
             state = 'MANUAL'
+
+            config['CORE']['state'] = 'MANUAL'
+            with open('config.ini', 'w') as configfile:
+                config.write(configfile)
             
             client.publish('vent_state_pub', state)
 
         elif msg.payload == b'AUTO':
 
             state = 'AUTO'
+
+            config['CORE']['state'] = 'AUTO'
+            with open('config.ini', 'w') as configfile:
+                config.write(configfile)
 
             client.publish('vent_state_pub', state)
 
@@ -80,6 +103,11 @@ def on_message(client, userdata, msg):
             t = int(msg.payload)
             if (t >= 0 and t <= 50):
                 t_auto = t
+                
+                config['CORE']['t_auto'] = str(t_auto)
+                with open('config.ini', 'w') as configfile:
+                    config.write(configfile)
+                
                 client.publish('t_auto_pub', t_auto)
             else:
                 client.publish('t_auto_pub', 'Wrong value')
@@ -98,6 +126,10 @@ def on_message(client, userdata, msg):
 
             elif state == 'MANUAL':
 
+                config['CORE']['converter'] = 'ON'
+                with open('config.ini', 'w') as configfile:
+                    config.write(configfile)
+
                 client.publish('converter_com', 'ON')
             
         elif msg.payload == b'OFF':
@@ -108,6 +140,10 @@ def on_message(client, userdata, msg):
 
             elif state == 'MANUAL':
 
+                config['CORE']['converter'] = 'OFF'
+                with open('config.ini', 'w') as configfile:
+                    config.write(configfile)
+
                 client.publish('converter_com', 'OFF')
 
             
@@ -116,11 +152,15 @@ def on_message(client, userdata, msg):
 
         if state == 'AUTO':
 
-                client.publish('frequency_pub', 'Switch to MANUAL!')
+            client.publish('frequency_pub', 'Switch to MANUAL!')
 
         elif state == 'MANUAL':
 
-                client.publish('frequency_com', msg.payload)
+            config['CORE']['frequency'] = str(msg.payload)
+            with open('config.ini', 'w') as configfile:
+                config.write(configfile)
+
+            client.publish('frequency_com', str(msg.payload))
 
 
         
@@ -138,7 +178,7 @@ client.loop_start()
 
 while True:
 
-    print(state + ' ' + str(t_auto) + ' ' + str(frequency))
+    print(state + ' ' + str(t_auto) + ' ' + converter + ' ' + str(frequency) + ' ' + str(hot_valves) + ' ' + str(cold_valves))
     
 
     state_pub_counter -= 1
