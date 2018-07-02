@@ -7,9 +7,6 @@ import time, os, glob
 import paho.mqtt.client as mqtt
 import Adafruit_DHT
 
-# boot delay
-time.sleep(15)
-
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
 
@@ -68,36 +65,38 @@ def read_temp2():
         return temp_c
 	
 while True:
-    
-    humidity1, temperature1 = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, 21)
+
+    # humidity1, temperature1 = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, 21)
+    humidity1, temperature1 = Adafruit_DHT.read(Adafruit_DHT.DHT22, 21)
     
     if humidity1 is not None and temperature1 is not None:
-        print('Temp={0:0.1f}C  Humidity={1:0.1f}%'.format(temperature1, humidity1))
-        client.publish('temperature1', str(temperature1))
+        print('Temp={0:0.2f}C  Humidity={1:0.2f}%'.format(temperature1, humidity1))
+        client.publish('temperature1', "{:.2f}".format(temperature1))
         time.sleep(delay)
-        client.publish('humidity1', str(humidity1))
+        client.publish('humidity1', "{:.2f}".format(humidity1))
     else:
+        # add errors handling
         print('Failed to get reading. Try again!')
 
 
     humidity2, temperature2 = Adafruit_DHT.read(Adafruit_DHT.DHT22, 20)
 
     if humidity2 is not None and temperature2 is not None:
-        print('Temp={0:0.1f}C  Humidity={1:0.1f}%'.format(temperature2, humidity2))
-        client.publish('temperature2', str(temperature2))
+        print('Temp = {0:0.2f}C  Humidity = {1:0.2f}%'.format(temperature2, humidity2))
+        client.publish('temperature2', "{:.2f}".format(temperature2))
         time.sleep(delay)
-        client.publish('humidity2', str(humidity2))
+        client.publish('humidity2', "{:.2f}".format(humidity2))
     else:
         print('Failed to get reading. Try again!')
 
 
     t3 = read_temp()
     print(t3)
-    client.publish('temperature3', str(t3))
+    client.publish('temperature3', "{:.2f}".format(t3))
     time.sleep(delay)
 
     
     t4 = read_temp2()
     print(t4)
-    client.publish('temperature4', str(t4))
+    client.publish('temperature4', "{:.2f}".format(t4))
     time.sleep(delay)
